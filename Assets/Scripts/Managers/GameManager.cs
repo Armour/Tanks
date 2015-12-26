@@ -7,16 +7,18 @@ public class GameManager : MonoBehaviour {
 	
     public int m_NumRoundsToWin = 3;        
     public float m_StartDelay = 1.5f;         
-    public float m_EndDelay = 2.0f;           
+	public float m_EndDelay = 2.0f;    
+	public bool duelMode;        
     public CameraControl m_CameraControl;   
     public Text m_MessageText;              
     public GameObject m_TankPrefab;         
-    public TankManager[] m_Tanks;           
+	public TankManager[] m_Tanks;
+	public TankManager[] m_duelTanks;
 
 
     private int m_RoundNumber;                
     private TankManager m_RoundWinner;
-    private TankManager m_GameWinner;       
+    private TankManager m_GameWinner;
 
 
     private void Start() {
@@ -31,15 +33,30 @@ public class GameManager : MonoBehaviour {
             m_Tanks[i].m_PlayerNumber = i + 1;
             m_Tanks[i].Setup();
         }
+		if (duelMode) {
+			for (int i = 0; i < m_duelTanks.Length; i++) {
+				m_duelTanks[i].m_PlayerColor = m_Tanks[i].m_PlayerColor;
+				m_duelTanks[i].m_Instance = Instantiate(m_TankPrefab, m_duelTanks[i].m_SpawnPoint.position, m_duelTanks[i].m_SpawnPoint.rotation) as GameObject;
+				m_duelTanks[i].m_PlayerNumber = i + 1;
+				m_duelTanks[i].Setup();
+			}
+		}
     }
 
     private void SetCameraTargets() {
-        Transform[] targets = new Transform[m_Tanks.Length];
-
-		for (int i = 0; i < targets.Length; i++) {
-            targets[i] = m_Tanks[i].m_Instance.transform;
-        }
-
+		Transform[] targets;
+		if (!duelMode) {
+			targets = new Transform[m_Tanks.Length];
+			for (int i = 0; i < targets.Length; i++) {
+				targets[i] = m_Tanks[i].m_Instance.transform;
+			}
+		} else {
+			targets = new Transform[m_Tanks.Length * 2];
+			for (int i = 0; i < m_Tanks.Length; i++) {
+				targets[i] = m_Tanks[i].m_Instance.transform;
+				targets[i + m_duelTanks.Length] = m_duelTanks[i].m_Instance.transform;
+			}
+		}
         m_CameraControl.m_Targets = targets;
     }
 
@@ -84,19 +101,26 @@ public class GameManager : MonoBehaviour {
     }
 		
     private bool OneTankLeft() {
-        int numTanksLeft = 0;
+		int numTanksLeft = m_Tanks.Length;
 
-        for (int i = 0; i < m_Tanks.Length; i++) {
-            if (m_Tanks[i].m_Instance.activeSelf)
-                numTanksLeft++;
-        }
+		if (!duelMode) {
+	        for (int i = 0; i < m_Tanks.Length; i++) {
+	            if (!m_Tanks[i].m_Instance.activeSelf)
+	                numTanksLeft--;
+	        }
+		} else {
+			for (int i = 0; i < m_Tanks.Length; i++) {
+				if (!m_Tanks[i].m_Instance.activeSelf && !m_duelTanks[i].m_Instance.activeSelf)
+					numTanksLeft--;
+			}
+		}
 
         return numTanksLeft <= 1;
     }
 
     private TankManager GetRoundWinner() {
         for (int i = 0; i < m_Tanks.Length; i++) {
-            if (m_Tanks[i].m_Instance.activeSelf)
+			if (m_Tanks[i].m_Instance.activeSelf || (duelMode && m_duelTanks[i].m_Instance.activeSelf))
                 return m_Tanks[i];
         } 
         return null;
@@ -132,17 +156,32 @@ public class GameManager : MonoBehaviour {
         for (int i = 0; i < m_Tanks.Length; i++) {
             m_Tanks[i].Reset();
         }
+		if (duelMode) {
+			for (int i = 0; i < m_duelTanks.Length; i++) {
+				m_duelTanks[i].Reset();
+			}
+		}
     }
 		
     private void EnableTankControl() {
         for (int i = 0; i < m_Tanks.Length; i++) {
             m_Tanks[i].EnableControl();
         }
+		if (duelMode) {
+			for (int i = 0; i < m_duelTanks.Length; i++) {
+				m_duelTanks[i].EnableControl();
+			}
+		}
     }
 
     private void DisableTankControl() {
 		for (int i = 0; i < m_Tanks.Length; i++) {
             m_Tanks[i].DisableControl();
         }
+		if (duelMode) {
+			for (int i = 0; i < m_duelTanks.Length; i++) {
+				m_duelTanks[i].DisableControl();
+			}
+		}
     }
 }
